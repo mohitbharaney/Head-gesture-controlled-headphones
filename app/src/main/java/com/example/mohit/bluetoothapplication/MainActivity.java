@@ -34,7 +34,7 @@ public class MainActivity extends ActionBarActivity {
     byte[] readBuffer;
     int readBufferPosition;
     int counter;
-    volatile    boolean stopWorker = false;
+    volatile    boolean stopWorker = true;
     public MainActivity() {
         //
     }
@@ -70,66 +70,7 @@ public class MainActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void VolumeUp(View view) {
-        Context context = getApplicationContext();
-        CharSequence temp = "Volume up";
-        Toast toast = Toast.makeText(context, temp, Toast.LENGTH_SHORT);
-        toast.show();
-        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-
-
-        audioManager.adjustVolume(AudioManager.ADJUST_RAISE, AudioManager.FLAG_PLAY_SOUND);
-
-
-//        audioManager.dispatchMediaKeyEvent(new KeyEvent());
-//        Intent intent = new Intent("com.android.music.musicservicecommand");
-//        intent.putExtra("command", "Pause");
-//        sendBroadcast(intent);
-
-    }
-
-
-    public void VolumeDown(View view) {
-        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-
-
-        audioManager.adjustVolume(AudioManager.ADJUST_LOWER, AudioManager.FLAG_PLAY_SOUND);
-    }
-
-    public void Play(View view) {
-
-        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY);
-        audioManager.dispatchMediaKeyEvent(event);
-
-        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY);
-        audioManager.dispatchMediaKeyEvent(event2);
-        //sendMediaButton(getApplicationContext(), KeyEvent.KEYCODE_MEDIA_PLAY);
-    }
-
-    public void Pause(View view) {
-        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE);
-        audioManager.dispatchMediaKeyEvent(event);
-
-        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE);
-        audioManager.dispatchMediaKeyEvent(event2);
-
-        //sendMediaButton(getApplicationContext(), KeyEvent.KEYCODE_MEDIA_PAUSE);
-        }
-
-    public void NextSong(View view) {
-        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_NEXT);
-        audioManager.dispatchMediaKeyEvent(event);
-
-        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_NEXT);
-        audioManager.dispatchMediaKeyEvent(event2);
-
-        //sendMediaButton(getApplicationContext(), KeyEvent.KEYCODE_MEDIA_PAUSE);
-    }
-
-    public void EstablishBtConnect(View view)
+       public void EstablishBtConnect(View view)
     {
         try
         {
@@ -263,6 +204,14 @@ public class MainActivity extends ActionBarActivity {
                                             {
                                                 DecreaseVolume();
                                             }
+                                            else if(data.trim().equals("3"))
+                                            {
+                                                Pause();
+                                            }
+                                            else if(data.trim().equals("4"))
+                                            {
+                                                Play();
+                                            }
                                         }
                                     });
                                 }
@@ -317,6 +266,26 @@ public class MainActivity extends ActionBarActivity {
 
 
         audioManager.adjustVolume(AudioManager.ADJUST_RAISE, AudioManager.FLAG_PLAY_SOUND);
+    }
+
+    public void Play()
+    {
+        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY);
+        audioManager.dispatchMediaKeyEvent(event);
+
+        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY);
+        audioManager.dispatchMediaKeyEvent(event2);
+    }
+
+    public void Pause()
+    {
+        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE);
+        audioManager.dispatchMediaKeyEvent(event);
+
+        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE);
+        audioManager.dispatchMediaKeyEvent(event2);
     }
     void closeBT() throws IOException
     {
