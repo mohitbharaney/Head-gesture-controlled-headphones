@@ -9,11 +9,12 @@ import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
@@ -34,16 +35,18 @@ public class MainActivity extends ActionBarActivity {
     byte[] readBuffer;
     int readBufferPosition;
     int counter;
-    volatile    boolean stopWorker = true;
+
+    volatile boolean stopWorker = false;
+
     public MainActivity() {
         //
+
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
 
     }
 
@@ -70,36 +73,22 @@ public class MainActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-       public void EstablishBtConnect(View view)
-    {
-        try
-        {
+    public void EstablishBtConnect(View view) {
+        try {
             findBT();
             openBT();
+        } catch (IOException ex) {
+            Log.e("bluetoothapplication",ex.getMessage());
         }
-        catch (IOException ex) { }
     }
 
     public void CloseBtConnect(View view) throws IOException {
         closeBT();
     }
-    public void PreviousSong(View view) {
-        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PREVIOUS);
-        audioManager.dispatchMediaKeyEvent(event);
 
-        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PREVIOUS);
-        audioManager.dispatchMediaKeyEvent(event2);
-
-        //sendMediaButton(getApplicationContext(), KeyEvent.KEYCODE_MEDIA_PAUSE);
-    }
-
-
-    void findBT()
-    {
+    void findBT() {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if(mBluetoothAdapter == null)
-        {
+        if (mBluetoothAdapter == null) {
 
             Context context = getApplicationContext();
             CharSequence temp = "No bluetooth adapter available";
@@ -108,19 +97,15 @@ public class MainActivity extends ActionBarActivity {
 
         }
 
-        if(!mBluetoothAdapter.isEnabled())
-        {
+        if (!mBluetoothAdapter.isEnabled()) {
             Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBluetooth, 0);
         }
 
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-        if(pairedDevices.size() > 0)
-        {
-            for(BluetoothDevice device : pairedDevices)
-            {
-                if(device.getName().equals("HC-06"))
-                {
+        if (pairedDevices.size() > 0) {
+            for (BluetoothDevice device : pairedDevices) {
+                if (device.getName().equals("HC-06")) {
                     mmDevice = device;
                     break;
                 }
@@ -133,8 +118,7 @@ public class MainActivity extends ActionBarActivity {
 
     }
 
-    void openBT() throws IOException
-    {
+    void openBT() throws IOException {
         UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Standard SerialPortService ID
         mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
         mmSocket.connect();
@@ -147,35 +131,27 @@ public class MainActivity extends ActionBarActivity {
         CharSequence temp = "Bluetooth Device Opened";
         Toast toast = Toast.makeText(context, temp, Toast.LENGTH_SHORT);
         toast.show();
-     //   myLabel.setText("Bluetooth Opened");
+        //   myLabel.setText("Bluetooth Opened");
     }
 
-    void beginListenForData()
-    {
+    void beginListenForData() {
         final Handler handler = new Handler();
         final byte delimiter = 10; //This is the ASCII code for a newline character
 
         stopWorker = false;
         readBufferPosition = 0;
         readBuffer = new byte[1024];
-        workerThread = new Thread(new Runnable()
-        {
-            public void run()
-            {
-                while(!Thread.currentThread().isInterrupted() && !stopWorker)
-                {
-                    try
-                    {
+        workerThread = new Thread(new Runnable() {
+            public void run() {
+                while (!Thread.currentThread().isInterrupted() && !stopWorker) {
+                    try {
                         int bytesAvailable = mmInputStream.available();
-                        if(bytesAvailable > 0)
-                        {
+                        if (bytesAvailable > 0) {
                             byte[] packetBytes = new byte[bytesAvailable];
                             mmInputStream.read(packetBytes);
-                            for(int i=0;i<bytesAvailable;i++)
-                            {
+                            for (int i = 0; i < bytesAvailable; i++) {
                                 byte b = packetBytes[i];
-                                if(b == delimiter)
-                                {
+                                if (b == delimiter) {
                                     byte[] encodedBytes = new byte[readBufferPosition];
                                     System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
                                     final String data = new String(encodedBytes, "US-ASCII");
@@ -184,46 +160,29 @@ public class MainActivity extends ActionBarActivity {
 //                                    CharSequence temp = data;
 //                                    Toast toast = Toast.makeText(context, temp, Toast.LENGTH_SHORT);
 //                                    toast.show();
-                                    handler.post(new Runnable()
-                                    {
-                                        public void run()
-                                        {
-                                            if(data.trim().equals("1"))
-                                            {
+                                    handler.post(new Runnable() {
+                                        public void run() {
+                                            if (data.trim().equals("1")) {
                                                 NextSong();
-                                            }
-                                            else if(data.trim().equals("-1"))
-                                            {
+                                            } else if (data.trim().equals("-1")) {
                                                 PreviousSong();
-                                            }
-                                            else if(data.trim().equals("2"))
-                                            {
+                                            } else if (data.trim().equals("2")) {
                                                 IncreaseVolume();
-                                            }
-                                            else if(data.trim().equals("-2"))
-                                            {
+                                            } else if (data.trim().equals("-2")) {
                                                 DecreaseVolume();
-                                            }
-                                            else if(data.trim().equals("3"))
-                                            {
+                                            } else if (data.trim().equals("3")) {
                                                 Pause();
-                                            }
-                                            else if(data.trim().equals("4"))
-                                            {
+                                            } else if (data.trim().equals("4")) {
                                                 Play();
                                             }
                                         }
                                     });
-                                }
-                                else
-                                {
+                                } else {
                                     readBuffer[readBufferPosition++] = b;
                                 }
                             }
                         }
-                    }
-                    catch (IOException ex)
-                    {
+                    } catch (IOException ex) {
                         stopWorker = true;
                     }
                 }
@@ -233,62 +192,86 @@ public class MainActivity extends ActionBarActivity {
         workerThread.start();
     }
 
-    public void NextSong()
-    {
+    public void NextSong() {
         audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_NEXT);
-        audioManager.dispatchMediaKeyEvent(event);
 
-        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_NEXT);
-        audioManager.dispatchMediaKeyEvent(event2);
-    }
-    public void PreviousSong()
-    {
-        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PREVIOUS);
-        audioManager.dispatchMediaKeyEvent(event);
+        int mode = audioManager.getMode();
+        if (mode == AudioManager.MODE_NORMAL && audioManager.isMusicActive()) {
+            KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_NEXT);
+            audioManager.dispatchMediaKeyEvent(event);
 
-        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PREVIOUS);
-        audioManager.dispatchMediaKeyEvent(event2);
+            KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_NEXT);
+            audioManager.dispatchMediaKeyEvent(event2);
+
+        }
     }
 
-    public void DecreaseVolume()
-    {
+    public void PreviousSong() {
+        audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+        int mode = audioManager.getMode();
+
+        if (mode == AudioManager.MODE_NORMAL && audioManager.isMusicActive()) {
+
+            KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PREVIOUS);
+            audioManager.dispatchMediaKeyEvent(event);
+
+            KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PREVIOUS);
+            audioManager.dispatchMediaKeyEvent(event2);
+        }
+    }
+    public void DecreaseVolume() {
         audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
 
 
         audioManager.adjustVolume(AudioManager.ADJUST_LOWER, AudioManager.FLAG_PLAY_SOUND);
     }
 
-    public void IncreaseVolume()
-    {
+    public void IncreaseVolume() {
         audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
 
 
         audioManager.adjustVolume(AudioManager.ADJUST_RAISE, AudioManager.FLAG_PLAY_SOUND);
     }
 
-    public void Play()
-    {
+    public void Play() {
         audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY);
-        audioManager.dispatchMediaKeyEvent(event);
 
-        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY);
-        audioManager.dispatchMediaKeyEvent(event2);
+        int mode = audioManager.getMode();
+//        if (mode == AudioManager.MODE_RINGTONE) {
+//            KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CALL);
+//            audioManager.dispatchMediaKeyEvent(event);
+//
+//            KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CALL);
+//            audioManager.dispatchMediaKeyEvent(event2);
+//            return;
+//        }
+        if (mode == AudioManager.MODE_NORMAL && !audioManager.isMusicActive()) {
+
+            KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY);
+            audioManager.dispatchMediaKeyEvent(event);
+
+            KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY);
+            audioManager.dispatchMediaKeyEvent(event2);
+        }
     }
-
-    public void Pause()
-    {
+    public void Pause() {
         audioManager = (AudioManager) this.getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
-        KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE);
-        audioManager.dispatchMediaKeyEvent(event);
+        int mode = audioManager.getMode();
+//        if (mode == AudioManager.MODE_RINGTONE) {
+//
+//            audioManager.setMode(AudioManager.MODE_NORMAL);
+//            return;
+//        }
+        if (mode == AudioManager.MODE_NORMAL && audioManager.isMusicActive()) {
 
-        KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE);
-        audioManager.dispatchMediaKeyEvent(event2);
+            KeyEvent event = new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE);
+            audioManager.dispatchMediaKeyEvent(event);
+
+            KeyEvent event2 = new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE);
+            audioManager.dispatchMediaKeyEvent(event2);
+        }
     }
-    void closeBT() throws IOException
-    {
+    void closeBT() throws IOException {
         stopWorker = true;
         mmOutputStream.close();
         mmInputStream.close();
